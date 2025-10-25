@@ -89,10 +89,17 @@ internal static class GamePageChecks
         var infobox = allNodes.OfType<Template>().Where(n => n.Name.ToPlainText() == "Infobox game").FirstOrDefault();
 
         var boxart = infobox.Arguments["boxart"];
+        var igdbid = infobox.Arguments["igdbid"];
         if (boxart == null)
         {
             Console.WriteLine($"{gamePage.Title} has no box art!");
-            var games = await Program.IgdbClient.QueryAsync<Game>(IGDBClient.Endpoints.Games, $"fields id,name,cover,url,slug; where name = \"{gamePage.Title}\";");
+            const string gameFields = "fields id,name,cover,url,slug; ";
+
+            Game[] games;
+            if (igdbid != null && int.TryParse(igdbid.ToString(), out var id))
+                games = await Program.IgdbClient.QueryAsync<Game>(IGDBClient.Endpoints.Games, gameFields + $"where id = {id};");
+            else 
+                games = await Program.IgdbClient.QueryAsync<Game>(IGDBClient.Endpoints.Games, gameFields + $"where name = \"{gamePage.Title}\";");
             if (games.Length == 1)
             {
                 var game = games.First();
@@ -125,6 +132,7 @@ internal static class GamePageChecks
             else
             {
                 Console.WriteLine($"{games.Length} possible games.  Disabiguation needed.");
+                // TODO:  Post options to Talk page, ask user to pick an IGDB id.
             }
         }
 
