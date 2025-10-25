@@ -1,4 +1,5 @@
 ﻿using dotenv.net;
+using IGDB;
 using System.Text.RegularExpressions;
 using WikiClientLibrary;
 using WikiClientLibrary.Client;
@@ -9,9 +10,16 @@ using WikiClientLibrary.Sites;
 
 class Program
 {
+    public static IGDBClient IgdbClient { get; private set; }
+
     static void Main(string[] args)
     {
         DotEnv.Load(new DotEnvOptions(probeForEnv: true, probeLevelsToSearch: 6));
+
+        IgdbClient = IGDBClient.CreateWithDefaults(
+            Environment.GetEnvironmentVariable("igdb_client_id")!,
+            Environment.GetEnvironmentVariable("igdb_client_secret")!);
+
         MainAsync().Wait();
     }
 
@@ -46,6 +54,7 @@ class Program
             return;
         }
         _ = bool.TryParse(env["RearrangeTemplates"], out bool RearrangeTemplates);
+        _ = bool.TryParse(env["UploadBoxArt"], out bool UploadBoxArt);
 
         //var page = new WikiPage(site, "User:Silasary/sandbox");
         //await GamePageChecks.CheckTemplates(page);
@@ -57,9 +66,16 @@ class Program
         var members = new CategoryMembersGenerator(site, "Category:Games");
         await foreach (var member in members.EnumPagesAsync(PageQueryOptions.FetchContent | PageQueryOptions.ResolveRedirects))
         {
+            if (member.NamespaceId != 0)
+            {
+                Console.WriteLine($"Skipping {member.Title} (not in valid namespace)");
+                continue;
+            }
             Console.WriteLine(" - {0}", member.Title);
             if (RearrangeTemplates)
                 await GamePageChecks.CheckTemplates(member);
+            if (UploadBoxArt)
+                await GamePageChecks.CheckForBoxArt(member);
         }
 
         // We're done here

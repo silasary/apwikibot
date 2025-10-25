@@ -11,6 +11,7 @@
     <PackageReference Include="CXuesong.MW.MwParserFromScratch" Version="0.2.1" />
     <PackageReference Include="CXuesong.MW.WikiClientLibrary" Version="0.8.0" />
     <PackageReference Include="dotenv.net" Version="4.0.0" />
+    <PackageReference Include="IGDB" Version="6.1.0" />
   </ItemGroup>
 
 </Project>
