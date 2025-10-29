@@ -11,6 +11,7 @@ using WikiClientLibrary.Sites;
 class Program
 {
     public static IGDBClient IgdbClient { get; private set; }
+    public static bool PromptForIgdbOnTalkPage = true;
 
     static void Main(string[] args)
     {
@@ -55,6 +56,7 @@ class Program
         }
         _ = bool.TryParse(env["RearrangeTemplates"], out bool RearrangeTemplates);
         _ = bool.TryParse(env["UploadBoxArt"], out bool UploadBoxArt);
+        Program.PromptForIgdbOnTalkPage = bool.TryParse(env["PromptForIGDBOnTalkPage"], out bool prompt) && prompt;
 
         //var page = new WikiPage(site, "User:Silasary/sandbox");
         //await GamePageChecks.CheckTemplates(page);

@@ -10,6 +10,7 @@ using APWikiBot;
 
 internal static class GamePageChecks
 {
+    private static readonly Dictionary<long, string> PlatformCache = [];
 
     public async static Task<bool> CheckTemplates(WikiPage member)
     {
@@ -93,7 +94,7 @@ internal static class GamePageChecks
         if (boxart == null)
         {
             Console.WriteLine($"{gamePage.Title} has no box art!");
-            const string gameFields = "fields id,name,cover,url,slug; ";
+            const string gameFields = "fields *; ";
 
             Game[] games;
             if (igdbid != null && int.TryParse(igdbid.ToString(), out var id))
@@ -104,12 +105,12 @@ internal static class GamePageChecks
             {
                 var game = games.First();
                 Console.WriteLine($"Found IGDB entry: {game.Slug} ({game.Id})");
-                
+
                 var cover = await Program.IgdbClient.QueryAsync<Cover>(IGDBClient.Endpoints.Covers, $"fields *; where id = {game.Cover.Id};");
                 string url = cover.First().Url;
                 url = url.Replace("t_thumb", "t_cover_big").Replace(".jpg", ".png");
-                string file_name = "File:" + gamePage.Title + " Cover" + Path.GetExtension(url);
-                
+                string file_name = "File:" + gamePage.Title.Replace(":", "") + " Cover" + Path.GetExtension(url);
+
                 var file = await wc.GetAsync(url);
                 await gamePage.Site.UploadAsync(file_name, new StreamUploadSource(file.Content.ReadAsStream()), "Uploading box art from IGDB", false);
 
@@ -129,14 +130,46 @@ internal static class GamePageChecks
                     Console.WriteLine($"Added automated box art from IGDB {game.Slug}.");
                 }
             }
-            else
+            else if (games.Length > 0)
             {
                 Console.WriteLine($"{games.Length} possible games.  Disabiguation needed.");
                 // TODO:  Post options to Talk page, ask user to pick an IGDB id.
+                var talkPage = new WikiPage(gamePage.Site, "Talk:" + gamePage.Title);
+                await talkPage.RefreshAsync(PageQueryOptions.FetchContent | PageQueryOptions.ResolveRedirects);
+                if ((string.IsNullOrEmpty(talkPage.Content) || !talkPage.Content.Contains("IGDB disabiguation required")) && Program.PromptForIgdbOnTalkPage)
+                {
+                    var text = "AP Wiki Bot was unable to automatically determine which game this page is about. Please add an <code>igdbid=</code> with the appropriate ID to the game's infobox.\n\n";
+                    foreach (var game in games)
+                    {
+                        List<string> platforms = [];
+                        foreach (var pid in game.Platforms.Ids)
+                        {
+                            if (PlatformCache.TryGetValue(pid, out var name))
+                            {
+                                platforms.Add(name);
+                            }
+                            else
+                            {
+                                var names = await Program.IgdbClient.QueryAsync<Platform>(IGDBClient.Endpoints.Platforms, $"fields name; where id = {pid};");
+                                name = PlatformCache[pid] = names.First().Name;
+                                platforms.Add(name);
+                            }
+                        }
+                        text += $"* {game.Name} ({game.FirstReleaseDate}) for {string.Join(", ", platforms)}: <code>igdbid={game.Id}</code> ({game.Url})\n";
+                    }
+                    text += "\n~~~~";
+
+                    await talkPage.AddSectionAsync("IGDB disabiguation required", new WikiPageEditOptions()
+                    {
+                        Content = text,
+                    });
+                    Program.PromptForIgdbOnTalkPage = false;  // Only prompt once per run, because it's a bit spammy and intentionally not marked as a bot edit.
+                }
             }
         }
 
         return;
+    }
 
     }
 }
