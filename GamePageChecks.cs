@@ -171,5 +171,57 @@ internal static class GamePageChecks
         return;
     }
 
+    internal static async Task CheckSupportedNavbox(WikiPage gamePage)
+    {
+        await gamePage.RefreshAsync(PageQueryOptions.FetchContent | PageQueryOptions.ResolveRedirects);
+
+        var parser = new WikitextParser();
+        var ast = parser.Parse(gamePage.Content);
+
+        var allNodes = ast.EnumDescendants().ToList();
+
+        var infobox = allNodes.OfType<Template>().Where(n => n.Name.ToPlainText() == "Infobox game").FirstOrDefault();
+
+        var status = infobox.Arguments["ap-status"];
+        if (status == null)
+        {
+            Console.WriteLine($"{gamePage.Title} is missing an ap-status!");
+        }
+        else if (status.Value.ToPlainText() == "Core-verified" || status.Value.ToPlainText() == "Approved for Core")
+        {
+            if (!gamePage.Content.Contains("{{navbox supported}}"))
+            {
+                var newContent = gamePage.Content + "\n{{navbox supported}}";
+                await gamePage.EditAsync(new WikiPageEditOptions()
+                {
+                    Summary = "Automated addition of Supported Navbox for Core-verified games.",
+                    Bot = true,
+                    Minor = true,
+                    Watch = AutoWatchBehavior.None,
+                    Content = newContent,
+                });
+                Console.WriteLine($"Added Supported Navbox to {gamePage.Title}.");
+            }
+        }
+        else if (status.Value.ToPlainText() == "Custom" || status.Value.ToPlainText() == "After Dark")
+        {
+            if (gamePage.Content.Contains("{{navbox supported}}"))
+            {
+                var newContent = gamePage.Content.Replace("{{navbox supported}}", "");
+                await gamePage.EditAsync(new WikiPageEditOptions()
+                {
+                    Summary = "Automated removal of Supported Navbox for Custom games.",
+                    Bot = true,
+                    Minor = true,
+                    Watch = AutoWatchBehavior.None,
+                    Content = newContent,
+                });
+                Console.WriteLine($"Removed Supported Navbox from {gamePage.Title}.");
+            }
+        }
+        else
+        {
+            Console.WriteLine($"{gamePage.Title} has unrecognized ap-status: {status.Value.ToPlainText()}");
+        }
     }
 }

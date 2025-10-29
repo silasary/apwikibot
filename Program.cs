@@ -57,6 +57,7 @@ class Program
         _ = bool.TryParse(env["RearrangeTemplates"], out bool RearrangeTemplates);
         _ = bool.TryParse(env["UploadBoxArt"], out bool UploadBoxArt);
         Program.PromptForIgdbOnTalkPage = bool.TryParse(env["PromptForIGDBOnTalkPage"], out bool prompt) && prompt;
+        _ = bool.TryParse(env["CheckSupportedNavbox"], out bool CheckSupportedNavbox);
 
         //var page = new WikiPage(site, "User:Silasary/sandbox");
         //await GamePageChecks.CheckTemplates(page);
@@ -78,6 +79,8 @@ class Program
                 await GamePageChecks.CheckTemplates(member);
             if (UploadBoxArt)
                 await GamePageChecks.CheckForBoxArt(member);
+            if (CheckSupportedNavbox)
+                await GamePageChecks.CheckSupportedNavbox(member);
         }
 
         // We're done here
