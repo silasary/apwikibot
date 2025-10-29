@@ -97,10 +97,11 @@ internal static class GamePageChecks
             const string gameFields = "fields *; ";
 
             Game[] games;
-            if (igdbid != null && int.TryParse(igdbid.ToString(), out var id))
+            if (igdbid != null && int.TryParse(igdbid.Value.ToString().Trim(), out var id))
                 games = await Program.IgdbClient.QueryAsync<Game>(IGDBClient.Endpoints.Games, gameFields + $"where id = {id};");
             else 
                 games = await Program.IgdbClient.QueryAsync<Game>(IGDBClient.Endpoints.Games, gameFields + $"where name = \"{gamePage.Title}\";");
+
             if (games.Length == 1)
             {
                 var game = games.First();
