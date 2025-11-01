@@ -192,6 +192,9 @@ internal static class GamePageChecks
     private static async Task<List<string>> GetPlatformNames(Game game)
     {
         List<string> platforms = [];
+        if (game.Platforms == null)
+            return platforms;
+
         foreach (var pid in game.Platforms.Ids)
         {
             if (PlatformCache.TryGetValue(pid, out var name))
