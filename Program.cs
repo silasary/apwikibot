@@ -74,7 +74,7 @@ class Program
                 Console.WriteLine($"Skipping {member.Title} (not in valid namespace)");
                 continue;
             }
-            Console.WriteLine(" - {0}", member.Title);
+            //Console.WriteLine(" - {0}", member.Title);
             if (RearrangeTemplates)
                 await GamePageChecks.CheckTemplates(member);
             if (UploadBoxArt)

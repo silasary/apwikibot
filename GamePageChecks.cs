@@ -101,6 +101,10 @@ internal static class GamePageChecks
                 games = await Program.IgdbClient.QueryAsync<Game>(IGDBClient.Endpoints.Games, gameFields + $"where id = {id};");
             else 
                 games = await Program.IgdbClient.QueryAsync<Game>(IGDBClient.Endpoints.Games, gameFields + $"where name = \"{gamePage.Title}\";");
+            if (games.Length == 0)
+            {
+                games = await Program.IgdbClient.QueryAsync<Game>(IGDBClient.Endpoints.Games, gameFields + $"search \"{gamePage.Title}\";");
+            }
             if (games.Length > 1)
             {
                 var expected_platform = infobox.Arguments["platform"];
