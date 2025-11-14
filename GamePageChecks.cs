@@ -1,16 +1,15 @@
 ﻿using MwParserFromScratch;
 using WikiClientLibrary.Pages;
-using System.Linq;
 using MwParserFromScratch.Nodes;
 using IGDB;
 using IGDB.Models;
-using System.Net;
 using WikiClientLibrary.Files;
 using APWikiBot;
 
 internal static class GamePageChecks
 {
     private static readonly Dictionary<long, string> PlatformCache = [];
+    private static readonly Dictionary<string, string> FranchiseContents = [];
 
     public async static Task<bool> CheckTemplates(WikiPage member)
     {
@@ -268,5 +267,60 @@ internal static class GamePageChecks
         {
             Console.WriteLine($"{gamePage.Title} has unrecognized ap-status: {status.Value.ToPlainText()}");
         }
+    }
+
+
+    internal static async Task CheckFranchiseNavbox(WikiPage gamePage)
+    {
+        await gamePage.RefreshAsync(PageQueryOptions.FetchContent | PageQueryOptions.ResolveRedirects);
+
+        var parser = new WikitextParser();
+        var ast = parser.Parse(gamePage.Content);
+
+        var allNodes = ast.EnumDescendants().ToList();
+
+        var infobox = allNodes.OfType<Template>().Where(n => n.Name.ToPlainText() == "Infobox game").FirstOrDefault();
+
+        var series = infobox.EnumDescendants().OfType<Template>().Where(t => t.Name.ToPlainText().Equals("Series", StringComparison.CurrentCultureIgnoreCase)).FirstOrDefault();
+        if (series != null)
+        {
+            var franchise_page = series.Arguments[1].Value.ToPlainText() + " (series)";
+            string content;
+            if (!FranchiseContents.TryGetValue(franchise_page, out content))
+            {
+                var franchiseWikiPage = new WikiPage(gamePage.Site, franchise_page);
+                if (!franchiseWikiPage.Exists)
+                {
+                    Console.WriteLine($"{gamePage.Title} references non-existent franchise page {franchise_page}");
+                    return;
+                }
+                await franchiseWikiPage.RefreshAsync(PageQueryOptions.FetchContent | PageQueryOptions.ResolveRedirects);
+                FranchiseContents[franchise_page] = franchiseWikiPage.Content;
+                content = franchiseWikiPage.Content;
+            }
+            if (content == null)
+            {
+                return;
+            }
+            if (content.Contains("Navbox", StringComparison.InvariantCultureIgnoreCase))
+            {
+                var franchise_nodes = parser.Parse(content);
+                var templates = franchise_nodes.EnumDescendants().OfType<Template>().ToArray();
+                var navbox = templates.FirstOrDefault(t => t.Name.ToPlainText().Contains("Navbox", StringComparison.InvariantCultureIgnoreCase));
+
+                if (!gamePage.Content.Contains(navbox.ToString(), StringComparison.InvariantCultureIgnoreCase))
+                {
+                    var newcontent = gamePage.Content + "\n\n" + navbox.ToString();
+                    await gamePage.EditAsync(new WikiPageEditOptions
+                    {
+                        Bot = true,
+                        Content = newcontent,
+                        Summary = $"Added {navbox.Name}"
+                    });
+                }
+            }
+
+        }
+
     }
 }
