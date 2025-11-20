@@ -23,15 +23,22 @@ internal static class GamePageChecks
 
         var headerParagraph = allNodes.OfType<Paragraph>().FirstOrDefault();
 
-        var infobox = allNodes.OfType<Template>().Where(n => n.Name.ToPlainText() == "Infobox game").FirstOrDefault();
+        var infobox = allNodes.OfType<Template>().Where(n => n.Name.ToPlainText().Equals("Infobox game", StringComparison.InvariantCultureIgnoreCase)).FirstOrDefault();
         var asboxes = allNodes.OfType<Template>().Where(n => n.Name.ToPlainText() == "asbox").ToList();
         var gamestub = allNodes.OfType<Template>().Where(n => n.Name.ToPlainText() == "Game stub").FirstOrDefault();
         var notracker = allNodes.OfType<Template>().Where(n => n.Name.ToPlainText() == "NoTracker").FirstOrDefault();
+
+        var newContent = ast.ToString();
 
         if (infobox == null)
         {
             Console.WriteLine($"{member.Title} is missing an Infobox!");
         }
+        else if (infobox.Name.ToPlainText() != "Infobox game")
+        {
+            newContent = newContent.Replace("{{" + infobox.Name.ToPlainText(), "{{Infobox game");
+        }
+
         var infoboxIndex = allNodes.IndexOf(infobox);
         var notrackerIndex = allNodes.IndexOf(notracker);
         if (notracker != null && infoboxIndex < notrackerIndex)
@@ -49,7 +56,7 @@ internal static class GamePageChecks
             headerParagraph.Append(gamestub.ToString() + "\n");
         }
         
-        var newContent = ast.ToString();
+        
         string hparatext = headerParagraph.ToString();
         string oparatext = hparatext;
         while (hparatext.Contains("\n\n"))
@@ -87,6 +94,8 @@ internal static class GamePageChecks
         var allNodes = ast.EnumDescendants().ToList();
 
         var infobox = allNodes.OfType<Template>().Where(n => n.Name.ToPlainText() == "Infobox game").FirstOrDefault();
+        if (infobox == null)
+            return;
 
         var boxart = infobox.Arguments["boxart"];
         var igdbid = infobox.Arguments["igdbid"];
@@ -319,8 +328,6 @@ internal static class GamePageChecks
                     });
                 }
             }
-
         }
-
     }
 }
