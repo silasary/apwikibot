@@ -266,34 +266,35 @@ internal static class GamePageChecks
         }
         else if (status.Value.ToPlainText() == "Core-verified" || status.Value.ToPlainText() == "Approved for Core")
         {
-            if (!gamePage.Content.Contains("{{navbox supported}}"))
+            if (!gamePage.Content.Contains("{{Navbox core}}"))
             {
-                var newContent = gamePage.Content + "\n{{navbox supported}}";
+                var newContent = gamePage.Content + "\n{{Navbox core}}";
                 await gamePage.EditAsync(new WikiPageEditOptions()
                 {
-                    Summary = "Automated addition of Supported Navbox for Core-verified games.",
+                    Summary = "Automated addition of Core Navbox for Core-verified games.",
                     Bot = true,
                     Minor = true,
                     Watch = AutoWatchBehavior.None,
                     Content = newContent,
                 });
-                Console.WriteLine($"Added Supported Navbox to {gamePage.Title}.");
+                Console.WriteLine($"Added core Navbox to {gamePage.Title}.");
             }
+
         }
         else if (status.Value.ToPlainText() == "Custom" || status.Value.ToPlainText() == "After Dark")
         {
-            if (gamePage.Content.Contains("{{navbox supported}}"))
+            if (gamePage.Content.Contains("{{Navbox core}}"))
             {
-                var newContent = gamePage.Content.Replace("{{navbox supported}}", "");
+                var newContent = gamePage.Content.Replace("{{Navbox core}}", "");
                 await gamePage.EditAsync(new WikiPageEditOptions()
                 {
-                    Summary = "Automated removal of Supported Navbox for Custom games.",
+                    Summary = "Automated removal of Core Navbox for Custom games.",
                     Bot = true,
                     Minor = true,
                     Watch = AutoWatchBehavior.None,
                     Content = newContent,
                 });
-                Console.WriteLine($"Removed Supported Navbox from {gamePage.Title}.");
+                Console.WriteLine($"Removed Core Navbox from {gamePage.Title}.");
             }
         }
         else
