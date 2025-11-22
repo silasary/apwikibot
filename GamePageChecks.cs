@@ -10,6 +10,7 @@ internal static class GamePageChecks
 {
     private static readonly Dictionary<long, string> PlatformCache = [];
     private static readonly Dictionary<string, string> FranchiseContents = [];
+    private static readonly Dictionary<string, string> TemplateRedirects = [];
 
     public async static Task<bool> CheckTemplates(WikiPage member)
     {
@@ -29,6 +30,29 @@ internal static class GamePageChecks
         var notracker = allNodes.OfType<Template>().Where(n => n.Name.ToPlainText() == "NoTracker").FirstOrDefault();
 
         var newContent = ast.ToString();
+        foreach (var template in allNodes.OfType<Template>())
+        {
+            if (template.IsMagicWord)
+                continue;
+
+            var templateName = template.Name.ToPlainText();
+            switch (templateName)
+            {
+                case "asbox":
+                    continue;
+            }
+
+            if (!TemplateRedirects.TryGetValue(templateName, out var correctName))
+            {
+                var tempPage = new WikiPage(member.Site, "Template:" + templateName);
+                await tempPage.RefreshAsync(PageQueryOptions.FetchContent | PageQueryOptions.ResolveRedirects);
+                TemplateRedirects[templateName] = correctName = tempPage.Title.Replace("Template:", "");
+            }
+            if (!correctName.Equals(templateName, StringComparison.InvariantCultureIgnoreCase))
+            {
+                newContent = newContent.Replace("{{" + templateName, "{{" + correctName);
+            }
+        }
 
         if (infobox == null)
         {
@@ -69,7 +93,7 @@ internal static class GamePageChecks
         {
             await member.EditAsync(new WikiPageEditOptions()
             {
-                Summary = "Automated cleanup of game page layout.",
+                Summary = "Automated cleanup of templates.",
                 Bot = true,
                 Minor = true,
                 Watch = AutoWatchBehavior.None,
