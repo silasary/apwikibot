@@ -12,6 +12,16 @@ internal static class GamePageChecks
     private static readonly Dictionary<string, string> FranchiseContents = [];
     private static readonly Dictionary<string, string> TemplateRedirects = [];
 
+    public static Template? FindTemplate(IEnumerable<Node> allNodes, string name)
+    {
+        return allNodes.OfType<Template>().FirstOrDefault(n => n.Name.ToPlainText().Trim().Equals(name, StringComparison.InvariantCultureIgnoreCase));
+    }
+
+    public static List<Template> FindTemplates(IEnumerable<Node> allNodes, string name)
+    {
+        return allNodes.OfType<Template>().Where(n => n.Name.ToPlainText().Trim().Equals(name, StringComparison.InvariantCultureIgnoreCase)).ToList();
+    }
+
     public async static Task<bool> CheckTemplates(WikiPage member)
     {
         //Console.WriteLine($"Checking {member.Title} templates");
@@ -24,10 +34,10 @@ internal static class GamePageChecks
 
         var headerParagraph = allNodes.OfType<Paragraph>().FirstOrDefault();
 
-        var infobox = allNodes.OfType<Template>().Where(n => n.Name.ToPlainText().Equals("Infobox game", StringComparison.InvariantCultureIgnoreCase)).FirstOrDefault();
-        var asboxes = allNodes.OfType<Template>().Where(n => n.Name.ToPlainText() == "asbox").ToList();
-        var gamestub = allNodes.OfType<Template>().Where(n => n.Name.ToPlainText() == "Game stub").FirstOrDefault();
-        var notracker = allNodes.OfType<Template>().Where(n => n.Name.ToPlainText() == "NoTracker").FirstOrDefault();
+        var infobox = FindTemplate(allNodes, "Infobox game");
+        var asboxes = FindTemplates(allNodes, "asbox");
+        var gamestub = FindTemplate(allNodes, "Game stub");
+        var notracker = FindTemplate(allNodes, "NoTracker");
 
         var newContent = ast.ToString();
         foreach (var template in allNodes.OfType<Template>())
@@ -35,7 +45,7 @@ internal static class GamePageChecks
             if (template.IsMagicWord)
                 continue;
 
-            var templateName = template.Name.ToPlainText();
+            var templateName = template.Name.ToPlainText().Trim();
             switch (templateName)
             {
                 case "asbox":
@@ -58,9 +68,9 @@ internal static class GamePageChecks
         {
             Console.WriteLine($"{member.Title} is missing an Infobox!");
         }
-        else if (infobox.Name.ToPlainText() != "Infobox game")
+        else if (infobox.Name.ToPlainText() != "Infobox game\n")
         {
-            newContent = newContent.Replace("{{" + infobox.Name.ToPlainText(), "{{Infobox game");
+            newContent = newContent.Replace("{{" + infobox.Name.ToPlainText(), "{{Infobox game\n");
         }
 
         var infoboxIndex = allNodes.IndexOf(infobox);
@@ -117,7 +127,7 @@ internal static class GamePageChecks
 
         var allNodes = ast.EnumDescendants().ToList();
 
-        var infobox = allNodes.OfType<Template>().Where(n => n.Name.ToPlainText() == "Infobox game").FirstOrDefault();
+        var infobox = FindTemplate(allNodes, "Infobox game");
         if (infobox == null)
             return;
 
@@ -182,7 +192,7 @@ internal static class GamePageChecks
                 await gamePage.Site.UploadAsync(file_name, new StreamUploadSource(file.Content.ReadAsStream()), "Uploading box art from IGDB", false);
 
                 Template newInfoBox = (Template)infobox.Clone();
-                newInfoBox.Arguments.SetValue("boxart", $"[{file_name}]");
+                newInfoBox.Arguments.SetValue("boxart", $"[{file_name}]\n");
                 var newContent = gamePage.Content.Replace(infobox.ToString(), newInfoBox.ToString());
                 if (newContent != gamePage.Content)
                 {
@@ -257,14 +267,15 @@ internal static class GamePageChecks
 
         var allNodes = ast.EnumDescendants().ToList();
 
-        var infobox = allNodes.OfType<Template>().Where(n => n.Name.ToPlainText() == "Infobox game").FirstOrDefault();
+        var infobox = FindTemplate(allNodes, "Infobox game");
 
         var status = infobox.Arguments["ap-status"];
+        string? status_text = status?.Value?.ToPlainText()?.Trim();
         if (status == null)
         {
             Console.WriteLine($"{gamePage.Title} is missing an ap-status!");
         }
-        else if (status.Value.ToPlainText() == "Core-verified" || status.Value.ToPlainText() == "Approved for Core")
+        else if (status_text == "Core-verified" || status_text == "Approved for Core")
         {
             if (!gamePage.Content.Contains("{{Navbox core}}"))
             {
@@ -281,7 +292,7 @@ internal static class GamePageChecks
             }
 
         }
-        else if (status.Value.ToPlainText() == "Custom" || status.Value.ToPlainText() == "After Dark")
+        else if (status_text == "Custom" || status_text == "After Dark")
         {
             if (gamePage.Content.Contains("{{Navbox core}}"))
             {
@@ -299,7 +310,7 @@ internal static class GamePageChecks
         }
         else
         {
-            Console.WriteLine($"{gamePage.Title} has unrecognized ap-status: {status.Value.ToPlainText()}");
+            Console.WriteLine($"{gamePage.Title} has unrecognized ap-status: {status_text}");
         }
     }
 
@@ -313,9 +324,9 @@ internal static class GamePageChecks
 
         var allNodes = ast.EnumDescendants().ToList();
 
-        var infobox = allNodes.OfType<Template>().Where(n => n.Name.ToPlainText() == "Infobox game").FirstOrDefault();
+        var infobox = FindTemplate(allNodes, "Infobox game");
 
-        var series = infobox.EnumDescendants().OfType<Template>().Where(t => t.Name.ToPlainText().Equals("Series", StringComparison.CurrentCultureIgnoreCase)).FirstOrDefault();
+        var series = FindTemplate(infobox.EnumDescendants(), "Series");
         if (series != null)
         {
             var franchise_page = series.Arguments[1].Value.ToPlainText() + " (series)";
