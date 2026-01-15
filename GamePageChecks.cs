@@ -182,6 +182,11 @@ internal static class GamePageChecks
             {
                 var game = games.First();
                 Console.WriteLine($"Found IGDB entry: {game.Slug} ({game.Id})");
+                if (game.Cover == null)
+                {
+                    Console.WriteLine($"IGDB entry {game.Slug} has no cover.");
+                    return;
+                }
 
                 var cover = await Program.IgdbClient.QueryAsync<Cover>(IGDBClient.Endpoints.Covers, $"fields *; where id = {game.Cover.Id};");
                 string url = cover.First().Url;
