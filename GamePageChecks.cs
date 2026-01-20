@@ -214,11 +214,10 @@ internal static class GamePageChecks
             }
             else if (games.Length > 0)
             {
-                Console.WriteLine($"{games.Length} possible games.  Disabiguation needed.");
-                // TODO:  Post options to Talk page, ask user to pick an IGDB id.
+                Console.WriteLine($"{games.Length} possible games.  Disambiguation needed.");
                 var talkPage = new WikiPage(gamePage.Site, "Talk:" + gamePage.Title);
                 await talkPage.RefreshAsync(PageQueryOptions.FetchContent | PageQueryOptions.ResolveRedirects);
-                if ((string.IsNullOrEmpty(talkPage.Content) || !talkPage.Content.Contains("IGDB disabiguation required")) && Program.PromptForIgdbOnTalkPage)
+                if ((string.IsNullOrEmpty(talkPage.Content) || !talkPage.Content.Contains("IGDB disambiguation required")) && Program.PromptForIgdbOnTalkPage)
                 {
                     var text = "AP Wiki Bot was unable to automatically determine which game this page is about. Please add an <code>igdbid=</code> with the appropriate ID to the game's infobox.\n\n";
                     foreach (var game in games)
@@ -228,7 +227,7 @@ internal static class GamePageChecks
                     }
                     text += "\n~~~~";
 
-                    await talkPage.AddSectionAsync("IGDB disabiguation required", new WikiPageEditOptions()
+                    await talkPage.AddSectionAsync("IGDB disambiguation required", new WikiPageEditOptions()
                     {
                         Content = text,
                     });
