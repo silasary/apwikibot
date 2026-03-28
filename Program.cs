@@ -59,6 +59,8 @@ class Program
         Program.PromptForIgdbOnTalkPage = bool.TryParse(env["PromptForIGDBOnTalkPage"], out bool prompt) && prompt;
         _ = bool.TryParse(env["CheckSupportedNavbox"], out bool CheckSupportedNavbox);
         _ = bool.TryParse(env["CheckFranchiseNavbox"], out bool CheckFranchiseNavbox);
+        _ = bool.TryParse(env["CheckGenres"], out bool CheckGenres);
+        _ = bool.TryParse(env["CheckShortnameRedirects"], out bool CheckShortnameRedirects);
 
         //var page = new WikiPage(site, "User:Silasary/sandbox");
         //await GamePageChecks.CheckTemplates(page);
@@ -84,6 +86,10 @@ class Program
                 await GamePageChecks.CheckSupportedNavbox(member);
             if (CheckFranchiseNavbox)
                 await GamePageChecks.CheckFranchiseNavbox(member);
+            if (CheckShortnameRedirects)
+                await GamePageChecks.CheckTheRedirect(member);
+            if (CheckGenres)
+                await GamePageChecks.CheckGenreCategories(member);
         }
 
         // We're done here

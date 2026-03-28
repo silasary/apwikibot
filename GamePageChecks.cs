@@ -5,12 +5,17 @@ using IGDB;
 using IGDB.Models;
 using WikiClientLibrary.Files;
 using APWikiBot;
+using System.Runtime.CompilerServices;
+using WikiClientLibrary.Sites;
+using System.Globalization;
 
 internal static class GamePageChecks
 {
     private static readonly Dictionary<long, string> PlatformCache = [];
     private static readonly Dictionary<string, string> FranchiseContents = [];
     private static readonly Dictionary<string, string> TemplateRedirects = [];
+
+    private static readonly Dictionary<string, string> GenreCategories = [];
 
     public static Template? FindTemplate(IEnumerable<Node> allNodes, string name)
     {
@@ -372,5 +377,118 @@ internal static class GamePageChecks
                 }
             }
         }
+    }
+
+    internal static async Task CheckGenreCategories(WikiPage gamePage)
+    {
+        await gamePage.RefreshAsync(PageQueryOptions.FetchContent | PageQueryOptions.ResolveRedirects);
+
+        var parser = new WikitextParser();
+        var ast = parser.Parse(gamePage.Content);
+
+        var allNodes = ast.EnumDescendants().ToList();
+
+        var infobox = FindTemplate(allNodes, "Infobox game");
+
+        var genre = infobox.Arguments["genre"];
+        if (genre == null)
+        {
+            Console.WriteLine($"{gamePage.Title} has no genre");
+            return;
+        }
+        Console.WriteLine(genre.ToString());
+        var wps = FindTemplates(genre.Value.EnumDescendants(), "wp");
+        foreach (Template wp in wps)
+        {
+            wp.Name.Inlines.Clear();
+            wp.Name.Append("genre");
+        }
+        var genres = FindTemplates(genre.Value.EnumDescendants(), "genre");
+        if (!genres.Any())
+        {
+            Console.WriteLine($"{gamePage.Title} has no genre template in its genre field!");
+        }
+        foreach (var g in genres)
+        {
+            string wp_target = g.Arguments[1]?.Value?.ToPlainText()?.Trim() ?? "";
+            string self_name = wp_target;
+            if (g.Arguments.Count == 2)
+            {
+                self_name = g.Arguments[2]?.Value?.ToPlainText()?.Trim() ?? self_name;
+            }
+            if (!GenreCategories.ContainsKey(self_name))
+            {
+                GenreCategories[self_name] = self_name;
+                await CreateGenreCategory(gamePage.Site, self_name, wp_target);
+            }
+            if (GenreCategories[self_name] != self_name)
+            {
+                if (g.Arguments.Count == 2)
+                {
+                    g.Arguments.LastNode.Remove();
+                }
+
+                var arg2 = new TemplateArgument() { Value = new Wikitext(GenreCategories[self_name]) };
+                g.Arguments.Add(arg2);
+            }
+        }
+
+        string? genre_text = genre?.Value?.ToPlainText()?.Trim();
+        
+        var newcontent = ast.ToString();
+        if (ast.ToString() != gamePage.Content)
+        {
+            await gamePage.EditAsync(new WikiPageEditOptions
+            {
+                Bot = true,
+                Content = newcontent,
+                Summary = $"Adjusted Genre templates"
+            });
+        }
+    }
+
+    private async static Task<bool> CreateGenreCategory(WikiSite site, string self_name, string wp_target)
+    {
+
+        string title = "Category:" + self_name + " games";
+        var category_page = new WikiPage(site, title);
+        await category_page.RefreshAsync(PageQueryOptions.FetchContent | PageQueryOptions.ResolveRedirects);
+        if (!category_page.Exists)
+        {
+            var title_name = CultureInfo.InvariantCulture.TextInfo.ToTitleCase(self_name);
+            await category_page.EditAsync(new WikiPageEditOptions
+            {
+                Bot = true,
+                Content = $"{{{{Stub template}}}}\n\n[[wikipedia:{wp_target}|{title_name}]] games.\n\n[[Category:Games by Genre]]",
+                Summary = $"Creating category for the {self_name} genre.",
+            });
+            return false;
+        }
+        if (!category_page.Title.Equals(title, StringComparison.InvariantCultureIgnoreCase))
+        {
+            // We got redirected
+            GenreCategories[self_name] = category_page.Title.Substring(9, category_page.Title.Length - 9 - 6);
+            return true;
+        }
+        if (category_page.Content.Contains("{Stub template}", StringComparison.InvariantCultureIgnoreCase) && !category_page.Content.Contains("{{Stub template}}", StringComparison.InvariantCultureIgnoreCase))
+        {
+            // Whoops.
+            await category_page.EditAsync(new WikiPageEditOptions
+            {
+                Bot = true,
+                Content = category_page.Content.Replace("{Stub template}", "{{Stub template}}"),
+                Summary = $"Fixing stub template formatting.",
+            });
+        }
+        return false;
+    }
+
+    internal static async Task CheckTheRedirect(WikiPage gamePage)
+    {
+        if (!gamePage.Title.StartsWith("The "))
+            return;
+        var shortname = gamePage.Title.Replace("The ", "");
+        var shortpage = new WikiPage(gamePage.Site, shortname);
+
     }
 }
