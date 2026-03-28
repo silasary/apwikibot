@@ -160,6 +160,8 @@ internal static class GamePageChecks
                     }
                     if (platform_text == "PC")
                         platform_text = "PC (Microsoft Windows)";
+                    if (platform_text.Equals("GameCube", StringComparison.InvariantCultureIgnoreCase))
+                        platform_text = "Nintendo GameCube";
 
                     Console.WriteLine($"Filtering IGDB results for platform: {platform_text}");
                     List<Game> filtered = [];
