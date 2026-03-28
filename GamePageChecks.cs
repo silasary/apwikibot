@@ -458,7 +458,7 @@ internal static class GamePageChecks
             await category_page.EditAsync(new WikiPageEditOptions
             {
                 Bot = true,
-                Content = $"{{{{Stub template}}}}\n\n[[wikipedia:{wp_target}|{title_name}]] games.\n\n[[Category:Games by Genre]]",
+                Content = $"{{{{Stub template}}}}\n\n[[wikipedia:{wp_target}|{title_name}]] games.\n\n[[Category:Games by genre]]",
                 Summary = $"Creating category for the {self_name} genre.",
             });
             return false;
@@ -477,6 +477,15 @@ internal static class GamePageChecks
                 Bot = true,
                 Content = category_page.Content.Replace("{Stub template}", "{{Stub template}}"),
                 Summary = $"Fixing stub template formatting.",
+            });
+        }
+        if (category_page.Content.Contains("[[Category:Games by Genre]]"))
+        {
+            await category_page.EditAsync(new WikiPageEditOptions
+            {
+                Bot = true,
+                Content = category_page.Content.Replace("[[Category:Games by Genre]]", "[[Category:Games by genre]]"),
+                Summary = $"Fix category.",
             });
         }
         return false;
