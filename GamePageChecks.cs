@@ -305,6 +305,11 @@ internal static class GamePageChecks
         if (genre == null)
         {
             Console.WriteLine($"{gamePage.Title} has no genre");
+            var games = await IgdbResolution.LookupIgdb(gamePage, infobox);
+            if (games.Length == 1)
+            {
+
+            }
             return;
         }
         //Console.WriteLine(genre.ToString());
@@ -351,8 +356,6 @@ internal static class GamePageChecks
                 g.Arguments.Add(arg2);
             }
         }
-
-        
         
         var newcontent = ast.ToString();
         if (ast.ToString() != gamePage.Content)
@@ -417,6 +420,16 @@ internal static class GamePageChecks
             return;
         var shortname = gamePage.Title.Replace("The ", "");
         var shortpage = new WikiPage(gamePage.Site, shortname);
+        await shortpage.RefreshAsync(PageQueryOptions.FetchContent);
 
+        if (!shortpage.Exists)
+        {
+            await shortpage.EditAsync(new WikiPageEditOptions
+            {
+                Bot = true,
+                Content = $"#REDIRECT [[{gamePage.Title}]]",
+                Summary = $"Creating redirect from {shortname} to {gamePage.Title}",
+            });
+        }
     }
 }

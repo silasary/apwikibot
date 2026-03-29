@@ -1,4 +1,4 @@
-﻿using IGDB;
+using IGDB;
 using IGDB.Models;
 using MwParserFromScratch.Nodes;
 using WikiClientLibrary.Pages;
