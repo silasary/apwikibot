@@ -395,7 +395,7 @@ internal static class GamePageChecks
             Console.WriteLine($"{gamePage.Title} has no genre");
             return;
         }
-        Console.WriteLine(genre.ToString());
+        //Console.WriteLine(genre.ToString());
         var wps = FindTemplates(genre.Value.EnumDescendants(), "wp");
         foreach (Template wp in wps)
         {
@@ -406,6 +406,14 @@ internal static class GamePageChecks
         if (!genres.Any())
         {
             Console.WriteLine($"{gamePage.Title} has no genre template in its genre field!");
+            string? genre_text = genre?.Value?.ToPlainText()?.Trim();
+            var guess = new WikiPage(gamePage.Site, "Category:" + genre_text + " games");
+            await guess.RefreshAsync();
+            if (guess.Exists)
+            {
+                genre.Value = new Wikitext(" {{genre|" + genre.Value.ToString().Trim() + "}}\n");
+            }
+
         }
         foreach (var g in genres)
         {
@@ -432,7 +440,7 @@ internal static class GamePageChecks
             }
         }
 
-        string? genre_text = genre?.Value?.ToPlainText()?.Trim();
+        
         
         var newcontent = ast.ToString();
         if (ast.ToString() != gamePage.Content)
