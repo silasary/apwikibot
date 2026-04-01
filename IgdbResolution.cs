@@ -6,6 +6,7 @@ using WikiClientLibrary.Pages;
 internal static class IgdbResolution
 {
     private static readonly Dictionary<long, string> PlatformCache = [];
+    private static readonly Dictionary<long, string> GenreCache = [];
 
     public static async Task<Game[]> LookupIgdb(WikiPage gamePage, Template infobox)
     {
@@ -83,6 +84,29 @@ internal static class IgdbResolution
         }
 
         return platforms;
+    }
+
+    public static async Task<List<string>> GetGenreNames(Game game)
+    {
+        List<string> genres = [];
+        if (game.Genres == null)
+            return genres;
+
+        foreach (var gid in game.Genres.Ids)
+        {
+            if (GenreCache.TryGetValue(gid, out var name))
+            {
+                genres.Add(name);
+            }
+            else
+            {
+                var names = await Program.IgdbClient.QueryAsync<Platform>(IGDBClient.Endpoints.Genres, $"fields name; where id = {gid};");
+                name = GenreCache[gid] = names.First().Name;
+                genres.Add(name);
+            }
+        }
+
+        return genres;
     }
 
     private static async Task RequestIgdbDisambiguation(WikiPage gamePage, Game[] games)

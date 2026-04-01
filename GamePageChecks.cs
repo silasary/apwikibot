@@ -43,7 +43,6 @@ internal static class GamePageChecks
         var gamestub = FindTemplate(allNodes, "Game stub");
         var notracker = FindTemplate(allNodes, "NoTracker");
 
-        var newContent = ast.ToString();
         foreach (var template in allNodes.OfType<Template>())
         {
             if (template.IsMagicWord)
@@ -64,17 +63,15 @@ internal static class GamePageChecks
             }
             if (!correctName.Equals(templateName, StringComparison.InvariantCultureIgnoreCase))
             {
-                newContent = newContent.Replace("{{" + templateName, "{{" + correctName);
+                template.Name.Inlines.Clear();
+                template.Name.Append(correctName);
             }
         }
 
         if (infobox == null)
         {
             Console.WriteLine($"{member.Title} is missing an Infobox!");
-        }
-        else if (infobox.Name.ToPlainText() != "Infobox game\n")
-        {
-            newContent = newContent.Replace("{{" + infobox.Name.ToPlainText(), "{{Infobox game\n");
+            return false;
         }
 
         var infoboxIndex = allNodes.IndexOf(infobox);
@@ -83,7 +80,7 @@ internal static class GamePageChecks
         {
             Console.WriteLine("NoTracker was after Infobox");
             notracker.Remove();
-            headerParagraph.Prepend(notracker.ToString() + "\n");
+            infobox.InsertBefore(notracker);
         }
         gamestub ??= asboxes.FirstOrDefault();
         var gamestubIndex = allNodes.IndexOf(gamestub);
@@ -91,17 +88,10 @@ internal static class GamePageChecks
         {
             Console.WriteLine("Infobox was after Game Stub");
             gamestub.Remove();
-            headerParagraph.Append(gamestub.ToString() + "\n");
+            infobox.InsertBefore(gamestub);
         }
-        
-        
-        string hparatext = headerParagraph.ToString();
-        string oparatext = hparatext;
-        while (hparatext.Contains("\n\n"))
-        {
-            hparatext = hparatext.Replace("\n\n", "\n");
-        }
-        newContent = newContent.Replace(oparatext, hparatext);
+
+        var newContent = ast.ToString();
 
         if (newContent != member.Content)
         {
@@ -308,7 +298,17 @@ internal static class GamePageChecks
             var games = await IgdbResolution.LookupIgdb(gamePage, infobox);
             if (games.Length == 1)
             {
-
+                var dbgenres = await IgdbResolution.GetGenreNames(games.First());
+                foreach (var g in dbgenres)
+                {
+                    var guess = new WikiPage(gamePage.Site, "Category:" + g + " games");
+                    await guess.RefreshAsync();
+                    if (guess.Exists)
+                    {
+                        infobox.Arguments.Add(new TemplateArgument() { Name = new Wikitext("genre "), Value = new Wikitext(" {{genre|" + g + "}}\n") });
+                        break;
+                    }
+                }
             }
             return;
         }
